@@ -8,6 +8,7 @@ webFrame.setZoomLevelLimits(1, 1)
 
 CodeMirror = require 'codemirror'
 require 'codemirror/mode/xml/xml'
+require 'codemirror/keymap/vim'
 require 'codemirror/mode/markdown/markdown'
 require 'codemirror/mode/gfm/gfm'
 require 'codemirror/addon/edit/continuelist'
@@ -106,6 +107,9 @@ class EditorStates
 
     @codeMirror.on 'cursorActivity', (cm) => window.setTimeout (=> @refreshPage()), 5
 
+    @codeMirror.on 'vim-save', (cm) =>
+      MdsRenderer.sendToMain 'save'
+
   setImageDirectory: (directory) =>
     if @previewInitialized
       @preview.send 'setImageDirectory', directory
@@ -139,10 +143,14 @@ do ->
   editorStates = new EditorStates(
     CodeMirror.fromTextArea($('#editor')[0],
       mode: 'gfm'
-      theme: 'marp'
-      lineWrapping: true
-      lineNumbers: false
-      dragDrop: false
+      theme: 'monokai'
+      scrollbarStyle : 'null'
+      lineWrapping: false
+      lineNumbers: true
+      dragDrop: true
+      keyMap: "vim"
+      matchBrackets: true
+      showCursorWhenSelecting: true
       extraKeys:
         Enter: 'newlineAndIndentContinueMarkdownList'
     ),
@@ -178,11 +186,6 @@ do ->
     $('.pane.preview').css('flex-grow', (1 - splitPoint) * 100)
 
     return splitPoint
-
-  setEditorConfig = (editorConfig) ->
-    editor = $(editorStates.codeMirror?.getWrapperElement())
-    editor.css('font-family', editorConfig.fontFamily) if editor?
-    editor.css('font-size', editorConfig.fontSize) if editor?
 
   $('.pane-splitter')
     .mousedown ->
@@ -267,7 +270,6 @@ do ->
       else
         editorStates.preview.openDevTools()
 
-    .on 'setEditorConfig', (editorConfig) -> setEditorConfig editorConfig
     .on 'setSplitter', (spliiterPos) -> setSplitter spliiterPos
     .on 'setTheme', (theme) -> editorStates.updateGlobalSetting '$theme', theme
     .on 'themeChanged', (theme) -> MdsRenderer.sendToMain 'themeChanged', theme
